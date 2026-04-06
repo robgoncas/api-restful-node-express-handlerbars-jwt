@@ -1,0 +1,129 @@
+<h2 class="mb-4">📦 Dashboard de Productos</h2>
+
+<!-- ALERTAS -->
+<div id="alerta"></div>
+<div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4 p-3 bg-body rounded-3 shadow-sm">
+  <div>
+    <h5 class="mb-1">Bienvenido, {{usuario}}</h5>
+    <p class="mb-0 text-muted">Administra tus productos desde aquí.</p>
+  </div>
+  <a href="/logout" class="btn btn-danger">Cerrar sesión</a>
+</div>
+
+<!-- FORMULARIO -->
+<div class="card mb-4">
+  <div class="card-body">
+    <h5>Crear Producto</h5>
+
+    <form id="form_producto">
+      <input id="nombre" class="form-control mb-2" placeholder="Nombre" required>
+      <input id="precio" type="number" class="form-control mb-2" placeholder="Precio" required>
+
+      <button class="btn btn-success w-100">Agregar Producto</button>
+    </form>
+  </div>
+</div>
+
+<!-- LISTA -->
+<div class="card">
+  <div class="card-body">
+    <h5>Lista de Productos</h5>
+    <ul id="lista" class="list-group"></ul>
+  </div>
+</div>
+
+<script>
+const API = '/api/productos';
+const lista = document.getElementById('lista');
+const alerta = document.getElementById('alerta');
+
+const mostrar_alerta = (msg, tipo = 'success') => {
+  alerta.innerHTML = `
+    <div class="alert alert-${tipo}">
+      ${msg}
+    </div>
+  `;
+  setTimeout(() => alerta.innerHTML = '', 3000);
+};
+
+const cargar_productos = async () => {
+  try {
+    const res = await fetch(API);
+    const data = await res.json();
+
+    lista.innerHTML = '';
+
+    data.data.forEach(p => {
+      lista.innerHTML += `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>${p.nombre}</strong> - $${p.precio}
+          </div>
+
+          <button class="btn btn-danger btn-sm" onclick="eliminar_producto(${p.id})">
+            Eliminar
+          </button>
+        </li>
+      `;
+    });
+
+  } catch (error) {
+    mostrar_alerta('Error cargando productos', 'danger');
+  }
+};
+
+document.getElementById('form_producto').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const nombre = document.getElementById('nombre').value.trim();
+  const precio = document.getElementById('precio').value;
+
+  if (!nombre || !precio) {
+    return mostrar_alerta('Todos los campos son obligatorios', 'warning');
+  }
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, precio })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return mostrar_alerta(data.error || 'Error al crear producto', 'danger');
+    }
+
+    mostrar_alerta('Producto creado correctamente');
+    e.target.reset();
+    cargar_productos();
+
+  } catch {
+    mostrar_alerta('Error de conexión', 'danger');
+  }
+});
+
+const eliminar_producto = async (id) => {
+  if (!confirm('¿Eliminar producto?')) return;
+
+  try {
+    const res = await fetch(`${API}/${id}`, {
+      method: 'DELETE'
+    });
+
+    if (res.status === 204) {
+      mostrar_alerta('Producto eliminado');
+      cargar_productos();
+    } else {
+      mostrar_alerta('No se pudo eliminar', 'danger');
+    }
+
+  } catch {
+    mostrar_alerta('Error de conexión', 'danger');
+  }
+};
+
+// INIT
+cargar_productos();
+</script>
